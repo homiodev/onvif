@@ -21,6 +21,20 @@
     </license>
   </licenses>
 
+  <developers>
+    <developer>
+      <id>Ruslan</id>
+      <name>Ruslan Masiuk</name>
+      <email>ruslan.masuk@gmail.com</email>
+      <organization>Homio</organization>
+      <organizationUrl>https://www.homio.org</organizationUrl>
+      <roles>
+        <role>developer</role>
+      </roles>
+      <timezone>+3</timezone>
+    </developer>
+  </developers>
+
   <dependencies>
     <dependency>
       <artifactId>netty-all</artifactId>

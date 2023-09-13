@@ -1,2 +1,1 @@
-# onvif
-Common classes for onvif communication with camera
+Onvif classes for camera

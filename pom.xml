@@ -13,6 +13,14 @@
 
   <version>1.0.2-SNAPSHOT</version>
 
+  <licenses>
+    <license>
+      <name>The MIT License</name>
+      <url>https://raw.githubusercontent.com/ConvertAPI/convertapi-java/master/LICENSE.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <dependencies>
     <dependency>
       <artifactId>netty-all</artifactId>
@@ -78,6 +86,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.1.1</version>
       </plugin>
       <plugin>
         <groupId>org.sonatype.plugins</groupId>
@@ -93,6 +102,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
         <configuration>
           <release>17</release>
         </configuration>
@@ -125,26 +135,6 @@
           <tagNameFormat>@{project.version}</tagNameFormat>
         </configuration>
         <groupId>org.apache.maven.plugins</groupId>
-      </plugin>
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <configuration>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/resources</directory>
-                </resource>
-              </resources>
-            </configuration>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <id>copy-config-files</id>
-            <phase>package</phase>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-source-plugin</artifactId>

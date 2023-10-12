@@ -101,8 +101,11 @@ public class EventDevices {
         handleEventReceived(SOAP.parseMessage(PullMessagesResponse.class, message, entityID));
     }
 
-    public void subscribe(String event, EventHandler eventHandler) {
+    public void subscribe(EventHandler eventHandler, String event, String... events) {
         this.eventHandlers.put(event, eventHandler);
+        for (String et : events) {
+            this.eventHandlers.put(et, eventHandler);
+        }
     }
 
     private void fetchSubscriptionUrlAndSendPullMessages() {

@@ -105,12 +105,6 @@ public class EventDevices {
         this.eventHandlers.put(event, eventHandler);
     }
 
-    public void subscribe(String event1, String event2, String event3, EventHandler handler) {
-        this.eventHandlers.put(event1, handler);
-        this.eventHandlers.put(event2, handler);
-        this.eventHandlers.put(event3, handler);
-    }
-
     private void fetchSubscriptionUrlAndSendPullMessages() {
         log.info(
                 "[{}]: Trying fetch onvif message subscription for ip address <{}>...",

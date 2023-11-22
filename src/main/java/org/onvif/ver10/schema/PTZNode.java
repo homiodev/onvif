@@ -12,8 +12,12 @@ import java.util.List;
 import java.util.Map;
 import javax.xml.namespace.QName;
 import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
+@ToString
 @Getter
+@Setter
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(
         name = "PTZNode",
@@ -51,38 +55,10 @@ public class PTZNode extends DeviceEntity {
     @Getter @XmlAnyAttribute
     private final Map<QName, String> otherAttributes = new HashMap<>();
 
-    public void setName(String value) {
-        this.name = value;
-    }
-
-    public void setSupportedPTZSpaces(PTZSpaces value) {
-        this.supportedPTZSpaces = value;
-    }
-
-    public void setMaximumNumberOfPresets(int value) {
-        this.maximumNumberOfPresets = value;
-    }
-
-    public void setHomeSupported(boolean value) {
-        this.homeSupported = value;
-    }
-
     public List<String> getAuxiliaryCommands() {
         if (auxiliaryCommands == null) {
             auxiliaryCommands = new ArrayList<>();
         }
         return this.auxiliaryCommands;
-    }
-
-    public void setExtension(PTZNodeExtension value) {
-        this.extension = value;
-    }
-
-    public Boolean isFixedHomePosition() {
-        return fixedHomePosition;
-    }
-
-    public void setFixedHomePosition(Boolean value) {
-        this.fixedHomePosition = value;
     }
 }

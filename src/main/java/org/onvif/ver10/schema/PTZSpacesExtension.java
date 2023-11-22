@@ -6,7 +6,9 @@ import jakarta.xml.bind.annotation.XmlAnyElement;
 import jakarta.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.ToString;
 
+@ToString
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(
         name = "PTZSpacesExtension",

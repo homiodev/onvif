@@ -30,4 +30,16 @@ public class PTZVector {
         this.zoom = new Vector1D();
         this.zoom.x = z;
     }
+
+    @Override
+    public String toString() {
+        String text = "";
+        if (panTilt != null) {
+            text += "Tilt: " + panTilt;
+        }
+        if (zoom != null) {
+            text += "Tilt: " + zoom;
+        }
+        return text.isEmpty() ? "-" : text;
+    }
 }

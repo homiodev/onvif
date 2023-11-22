@@ -1,6 +1,7 @@
 package de.onvif.soap.devices;
 
 import de.onvif.soap.OnvifDeviceState;
+import de.onvif.soap.OnvifUrl;
 import de.onvif.soap.SOAP;
 import java.util.HashMap;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.media.wsdl.GetAudioSources;
 import org.onvif.ver10.media.wsdl.GetAudioSourcesResponse;
 import org.onvif.ver10.media.wsdl.GetSnapshotUri;
@@ -42,19 +44,19 @@ public class MediaDevices {
         return profile.getVideoEncoderConfiguration();
     }
 
-    public String getHTTPStreamUri(@NotNull String profile) {
+    public @Nullable OnvifUrl getHTTPStreamUri(@NotNull String profile) {
         return getStreamUri(profile, TransportProtocol.HTTP);
     }
 
-    public String getUDPStreamUri(@NotNull String profile) {
+    public @Nullable OnvifUrl getUDPStreamUri(@NotNull String profile) {
         return getStreamUri(profile, TransportProtocol.UDP);
     }
 
-    public String getRTSPStreamUri(@NotNull String profile) {
+    public @Nullable OnvifUrl getRTSPStreamUri(@NotNull String profile) {
         return getStreamUri(profile, TransportProtocol.TCP);
     }
 
-    public VideoEncoderConfigurationOptions getVideoEncoderConfigurationOptions(String profileToken) {
+    public @Nullable VideoEncoderConfigurationOptions getVideoEncoderConfigurationOptions(String profileToken) {
         GetVideoEncoderConfigurationOptions request = new GetVideoEncoderConfigurationOptions();
         request.setProfileToken(profileToken);
 
@@ -78,7 +80,7 @@ public class MediaDevices {
         return response != null;
     }
 
-    public String getSnapshotUri(String profile) {
+    public @Nullable OnvifUrl getSnapshotUri(String profile) {
         profileCache.putIfAbsent(profile, new ProfileMediaDeviceCache());
         ProfileMediaDeviceCache mediaDeviceCache = profileCache.get(profile);
         if (mediaDeviceCache.snapshotUri == null) {
@@ -92,16 +94,15 @@ public class MediaDevices {
                     return null;
                 }
 
-                mediaDeviceCache.snapshotUri =
-                        onvifDeviceState.replaceLocalIpWithProxyIp(response.getMediaUri().getUri());
+                mediaDeviceCache.snapshotUri = onvifDeviceState.replaceLocalIpWithProxyIp(response.getMediaUri().getUri());
             } catch (Exception ex) {
                 return null;
             }
         }
-        return mediaDeviceCache.snapshotUri;
+        return new OnvifUrl(mediaDeviceCache.snapshotUri);
     }
 
-    public List<VideoSource> getVideoSources() {
+    public @Nullable List<VideoSource> getVideoSources() {
         GetVideoSources request = new GetVideoSources();
         GetVideoSourcesResponse response =
                 soap.createSOAPMediaRequest(request, GetVideoSourcesResponse.class);
@@ -112,7 +113,7 @@ public class MediaDevices {
         return response.getVideoSources();
     }
 
-    public List<AudioSource> getAudioSources() {
+    public @Nullable List<AudioSource> getAudioSources() {
         GetAudioSources request = new GetAudioSources();
         GetAudioSourcesResponse response =
                 soap.createSOAPMediaRequest(request, GetAudioSourcesResponse.class);
@@ -128,21 +129,15 @@ public class MediaDevices {
     }
 
     @SneakyThrows
-    private String getStreamUri(String profileToken, StreamSetup streamSetup) {
+    private @Nullable String getStreamUri(String profileToken, StreamSetup streamSetup) {
         GetStreamUri request = new GetStreamUri();
         request.setProfileToken(profileToken);
         request.setStreamSetup(streamSetup);
-        GetStreamUriResponse response =
-                soap.createSOAPMediaRequest(request, GetStreamUriResponse.class);
-
-        if (response == null) {
-            return null;
-        }
-
-        return onvifDeviceState.replaceLocalIpWithProxyIp(response.getMediaUri().getUri());
+        GetStreamUriResponse response = soap.createSOAPMediaRequest(request, GetStreamUriResponse.class);
+        return response == null ? null : onvifDeviceState.replaceLocalIpWithProxyIp(response.getMediaUri().getUri());
     }
 
-    private String getStreamUri(@NotNull String profile, TransportProtocol transportProtocol) {
+    private @Nullable OnvifUrl getStreamUri(@NotNull String profile, TransportProtocol transportProtocol) {
         profileCache.putIfAbsent(profile, new ProfileMediaDeviceCache());
         ProfileMediaDeviceCache mediaDeviceCache = profileCache.get(profile);
         if (!mediaDeviceCache.protocolURI.containsKey(transportProtocol)) {
@@ -151,9 +146,13 @@ public class MediaDevices {
             Transport transport = new Transport();
             transport.setProtocol(transportProtocol);
             setup.setTransport(transport);
-            mediaDeviceCache.protocolURI.put(transportProtocol, getStreamUri(profile, setup));
+            String streamUri = getStreamUri(profile, setup);
+            if (streamUri != null) {
+                mediaDeviceCache.protocolURI.put(transportProtocol, streamUri);
+            }
         }
-        return mediaDeviceCache.protocolURI.get(transportProtocol);
+        String uri = mediaDeviceCache.protocolURI.get(transportProtocol);
+        return uri == null ? null : new OnvifUrl(uri);
     }
 
     private static class ProfileMediaDeviceCache {

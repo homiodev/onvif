@@ -17,6 +17,8 @@ import org.onvif.ver10.schema.PTZSpeed;
 import org.onvif.ver10.schema.PTZStatus;
 import org.onvif.ver10.schema.PTZVector;
 import org.onvif.ver10.schema.Profile;
+import org.onvif.ver10.schema.Space1DDescription;
+import org.onvif.ver10.schema.Space2DDescription;
 import org.onvif.ver10.schema.Vector1D;
 import org.onvif.ver10.schema.Vector2D;
 import org.onvif.ver20.ptz.wsdl.AbsoluteMove;
@@ -31,6 +33,8 @@ import org.onvif.ver20.ptz.wsdl.GetPresets;
 import org.onvif.ver20.ptz.wsdl.GetPresetsResponse;
 import org.onvif.ver20.ptz.wsdl.GetStatus;
 import org.onvif.ver20.ptz.wsdl.GetStatusResponse;
+import org.onvif.ver20.ptz.wsdl.GotoHomePosition;
+import org.onvif.ver20.ptz.wsdl.GotoHomePositionResponse;
 import org.onvif.ver20.ptz.wsdl.GotoPreset;
 import org.onvif.ver20.ptz.wsdl.GotoPresetResponse;
 import org.onvif.ver20.ptz.wsdl.RelativeMove;
@@ -67,11 +71,8 @@ public class PtzDevices {
     private Float currentPanCamValue = 0.0f;
     private Float currentTiltCamValue = 0.0f;
     private Float currentZoomCamValue = 0.0f;
-    private List<PTZPreset> presets;
-
-    public boolean isPtzOperationsSupported(@NotNull Profile profile) {
-        return getPTZConfiguration(profile) != null;
-    }
+    private boolean zoomSupported;
+    private boolean moveSupported;
 
     /**
      * @param profile - profile
@@ -133,31 +134,9 @@ public class PtzDevices {
         return null;
     }
 
-    public boolean isAbsoluteMoveSupported(@NotNull Profile profile) {
-        try {
-            if (profile.getPtzConfiguration().getDefaultAbsolutePantTiltPositionSpace() != null) {
-                return true;
-            }
-        } catch (NullPointerException ignore) {
-        }
-        return false;
-    }
-
-    public boolean isRelativeMoveSupported(@NotNull Profile profile) {
-        try {
-            if (profile.getPtzConfiguration().getDefaultRelativePanTiltTranslationSpace() != null) {
-                return true;
-            }
-        } catch (NullPointerException ignore) {
-        }
-        return false;
-    }
-
     public boolean relativeMove(float x, float y, float zoom, @NotNull Profile profile) {
         RelativeMove request = new RelativeMove();
-        Vector2D panTiltVector = new Vector2D();
-        panTiltVector.setX(x);
-        panTiltVector.setY(y);
+        Vector2D panTiltVector = new Vector2D(x, y);
         Vector1D zoomVector = new Vector1D();
         zoomVector.setX(zoom);
 
@@ -172,21 +151,9 @@ public class PtzDevices {
         return response != null;
     }
 
-    public boolean isContinuousMoveSupported(@NotNull Profile profile) {
-        try {
-            if (profile.getPtzConfiguration().getDefaultContinuousPanTiltVelocitySpace() != null) {
-                return true;
-            }
-        } catch (NullPointerException ignored) {
-        }
-        return false;
-    }
-
     public boolean continuousMove(float x, float y, float zoom, @NotNull Profile profile) {
         ContinuousMove request = new ContinuousMove();
-        Vector2D panTiltVector = new Vector2D();
-        panTiltVector.setX(x);
-        panTiltVector.setY(y);
+        Vector2D panTiltVector = new Vector2D(x, y);
         Vector1D zoomVector = new Vector1D();
         zoomVector.setX(zoom);
 
@@ -234,20 +201,16 @@ public class PtzDevices {
         return null != soap.createSOAPPtzRequest(request, SetHomePositionResponse.class);
     }
 
-    public @Nullable List<PTZPreset> getPresets(@NotNull Profile profile) {
-        if (this.presets == null) {
+    public @NotNull List<PTZPreset> getPresets(@NotNull Profile profile) {
             GetPresets request = new GetPresets();
             request.setProfileToken(profile.getToken());
 
             GetPresetsResponse response = soap.createSOAPPtzRequest(request, GetPresetsResponse.class);
 
             if (response == null) {
-                return null;
+                return List.of();
             }
-
-            this.presets = response.getPreset();
-        }
-        return this.presets;
+        return response.getPreset();
     }
 
     public @Nullable String setPreset(@NotNull String presetName, @Nullable String presetToken, @NotNull Profile profile) {
@@ -264,14 +227,6 @@ public class PtzDevices {
         return setPreset(presetName, null, profile);
     }
 
-    public boolean removePreset(@NotNull String presetToken, @NotNull Profile profile) {
-        RemovePreset request = new RemovePreset();
-        request.setProfileToken(profile.getToken());
-        request.setPresetToken(presetToken);
-
-        return null != soap.createSOAPPtzRequest(request, RemovePresetResponse.class);
-    }
-
     public void setAbsolutePan(float panValue, @NotNull Profile profile) {
         currentPanPercentage = panValue;
         currentPanCamValue = ((((panRangeMin - panRangeMax) * -1) / 100) * panValue + panRangeMin);
@@ -285,12 +240,19 @@ public class PtzDevices {
     }
 
     public void setAbsoluteZoom(float zoomValue, @NotNull Profile profile) { // Value is 0-100% of cameras range
+        if (!zoomSupported) {
+            throw new RuntimeException("W.ERROR.PAN_NOT_SUPPORTED");
+        }
         currentZoomPercentage = zoomValue;
         currentZoomCamValue = ((((zoomMin - zoomMax) * -1) / 100) * zoomValue + zoomMin);
         absoluteMove(currentPanCamValue, currentTiltCamValue, currentZoomCamValue, profile);
     }
 
     public void moveLeft(boolean continuous, @NotNull Profile profile) {
+        if (!moveSupported) {
+            throw new RuntimeException("W.ERROR.PAN_NOT_SUPPORTED");
+        }
+
         if (continuous) {
             continuousMove(-0.5f, 0f, 0f, profile);
         } else {
@@ -308,9 +270,9 @@ public class PtzDevices {
 
     public void moveUp(boolean continuous, @NotNull Profile profile) {
         if (continuous) {
-            continuousMove(0f, -0f, 0f, profile);
+            continuousMove(0f, -0.5f, 0f, profile);
         } else {
-            relativeMove(0f, 0.100000000f, 0f, profile);
+            relativeMove(0f, 0.1f, 0f, profile);
         }
     }
 
@@ -318,7 +280,7 @@ public class PtzDevices {
         if (continuous) {
             continuousMove(0f, 0.5f, 0f, profile);
         } else {
-            relativeMove(0f, -0.100000000f, 0f, profile);
+            relativeMove(0f, -0.1f, 0f, profile);
         }
     }
 
@@ -338,25 +300,66 @@ public class PtzDevices {
         }
     }
 
-    public void initFully(@NotNull Profile profile) {
-        PTZStatus ptzStatus = getStatus(profile);
-        this.presets = getPresets();
-
-        currentPanCamValue = ptzStatus.getPosition().getPanTilt().getX();
-        currentPanPercentage =
-                (((panRangeMin - currentPanCamValue) * -1) / ((panRangeMin - panRangeMax) * -1)) * 100;
-
-        currentTiltCamValue = ptzStatus.getPosition().getPanTilt().getY();
-        currentTiltPercentage =
-                (((tiltRangeMin - currentTiltCamValue) * -1) / ((tiltRangeMin - tiltRangeMax) * -1)) * 100;
-
-        currentZoomCamValue = ptzStatus.getPosition().getZoom().getX();
-        currentZoomPercentage =
-                (((zoomMin - currentZoomCamValue) * -1) / ((zoomMin - zoomMax) * -1)) * 100;
+    public boolean gotoHome(Profile profile) {
+        GotoHomePosition request = new GotoHomePosition();
+        request.setProfileToken(profile.getToken());
+        request.setSpeed(new PTZSpeed(0.5f, 0.5f, 0.5f));
+        return null != soap.createSOAPPtzRequest(request, GotoHomePositionResponse.class);
     }
 
-    public void gotoPreset(int index, @NotNull Profile profile) {
-        gotoPreset(getPresets().get(index).getToken(), profile);
+    public boolean saveHomePosition(@NotNull Profile profile) {
+        SetHomePosition request = new SetHomePosition();
+        request.setProfileToken(profile.getToken());
+        return null != soap.createSOAPPtzRequest(request, SetHomePositionResponse.class);
+    }
+
+    public boolean gotoPreset(@NotNull Profile profile, @NotNull String preset) {
+        GotoPreset request = new GotoPreset();
+        request.setProfileToken(profile.getToken());
+        request.setSpeed(new PTZSpeed(0.5f, 0.5f, 0.5f));
+        request.setPresetToken(preset);
+        return null != soap.createSOAPPtzRequest(request, GotoPresetResponse.class);
+    }
+
+    public boolean removePreset(@NotNull Profile profile, @NotNull PTZPreset preset) {
+        RemovePreset request = new RemovePreset();
+        request.setProfileToken(profile.getToken());
+        request.setPresetToken(preset.getToken());
+        return null != soap.createSOAPPtzRequest(request, RemovePresetResponse.class);
+    }
+
+    public boolean savePreset(@NotNull Profile profile, @NotNull String name, @Nullable String preset) {
+        SetPreset request = new SetPreset();
+        request.setProfileToken(profile.getToken());
+        request.setPresetToken(preset);
+        request.setPresetName(name);
+        return null != soap.createSOAPPtzRequest(request, SetPresetResponse.class);
+    }
+
+    public void initFully(@NotNull Profile profile) {
+        PTZStatus ptzStatus = getStatus(profile);
+
+        if (ptzStatus != null) {
+            Vector2D panTilt = ptzStatus.getPosition().getPanTilt();
+            if (panTilt != null) {
+                this.moveSupported = true;
+                currentPanCamValue = panTilt.getX();
+                currentPanPercentage =
+                    (((panRangeMin - currentPanCamValue) * -1) / ((panRangeMin - panRangeMax) * -1)) * 100;
+
+                currentTiltCamValue = panTilt.getY();
+                currentTiltPercentage =
+                    (((tiltRangeMin - currentTiltCamValue) * -1) / ((tiltRangeMin - tiltRangeMax) * -1)) * 100;
+            }
+
+            Vector1D zoom = ptzStatus.getPosition().getZoom();
+            if (zoom != null) {
+                this.zoomSupported = true;
+                currentZoomCamValue = zoom.getX();
+                currentZoomPercentage =
+                    (((zoomMin - currentZoomCamValue) * -1) / ((zoomMin - zoomMax) * -1)) * 100;
+            }
+        }
     }
 
     public boolean supportPTZ() {
@@ -364,7 +367,6 @@ public class PtzDevices {
     }
 
     public void dispose() {
-        presets = null;
         panRangeMin = -1.0f;
         panRangeMax = 1.0f;
         tiltRangeMin = -1.0f;
@@ -390,21 +392,26 @@ public class PtzDevices {
     private boolean absoluteMove(float x, float y, float zoom, @NotNull Profile profile) {
         PTZNode node = getNode(profile);
         if (node != null) {
-            FloatRange xRange =
-                    node.getSupportedPTZSpaces().getAbsolutePanTiltPositionSpace().get(0).getXRange();
-            FloatRange yRange =
-                    node.getSupportedPTZSpaces().getAbsolutePanTiltPositionSpace().get(0).getYRange();
-            FloatRange zRange =
-                    node.getSupportedPTZSpaces().getAbsoluteZoomPositionSpace().get(0).getXRange();
+            PTZSpaces ptzSpaces = node.getSupportedPTZSpaces();
+            List<Space2DDescription> panSpace = ptzSpaces.getAbsolutePanTiltPositionSpace();
+            if (!panSpace.isEmpty()) {
+                FloatRange xRange = panSpace.get(0).getXRange();
+                FloatRange yRange = panSpace.get(0).getYRange();
 
-            if (zoom < zRange.getMin() || zoom > zRange.getMax()) {
-                throw new IllegalArgumentException("Bad value for zoom: " + zoom);
+                if (x < xRange.getMin() || x > xRange.getMax()) {
+                    throw new IllegalArgumentException("Bad value for pan:/x " + x);
+                }
+                if (y < yRange.getMin() || y > yRange.getMax()) {
+                    throw new IllegalArgumentException("Bad value for tilt/y: " + y);
+                }
             }
-            if (x < xRange.getMin() || x > xRange.getMax()) {
-                throw new IllegalArgumentException("Bad value for pan:/x " + x);
-            }
-            if (y < yRange.getMin() || y > yRange.getMax()) {
-                throw new IllegalArgumentException("Bad value for tilt/y: " + y);
+            List<Space1DDescription> zoomSpace = ptzSpaces.getAbsoluteZoomPositionSpace();
+            if (!zoomSpace.isEmpty()) {
+                FloatRange zRange = zoomSpace.get(0).getXRange();
+
+                if (zoom < zRange.getMin() || zoom > zRange.getMax()) {
+                    throw new IllegalArgumentException("Bad value for zoom: " + zoom);
+                }
             }
         }
 
@@ -414,15 +421,6 @@ public class PtzDevices {
         request.setSpeed(new PTZSpeed(0.1f, 0.1f, 0));
 
         AbsoluteMoveResponse response = soap.createSOAPPtzRequest(request, AbsoluteMoveResponse.class);
-        return response != null;
-    }
-
-    private boolean gotoPreset(@NotNull String presetToken, @NotNull Profile profile) {
-        GotoPreset request = new GotoPreset();
-        request.setProfileToken(profile.getToken());
-        request.setPresetToken(presetToken);
-
-        GotoPresetResponse response = soap.createSOAPPtzRequest(request, GotoPresetResponse.class);
         return response != null;
     }
 }

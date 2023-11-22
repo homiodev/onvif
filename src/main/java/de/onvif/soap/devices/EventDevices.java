@@ -134,23 +134,18 @@ public class EventDevices {
     private void handleEventReceived(PullMessagesResponse pullMessagesResponse) {
         if (pullMessagesResponse != null) {
             boolean handled = pullMessagesResponse.getNotificationMessage().isEmpty();
-            for (NotificationMessageHolderType notificationMessageHolderType :
-                    pullMessagesResponse.getNotificationMessage()) {
-                String topic = notificationMessageHolderType.getTopic().getContent().get(0).toString();
+            for (NotificationMessageHolderType mht : pullMessagesResponse.getNotificationMessage()) {
+                String topic = mht.getTopic().getContent().get(0).toString();
                 if (topic.startsWith("tns1:")) {
                     topic = topic.substring("tns1:".length());
                     if (eventHandlers.containsKey(topic)) {
-                        Node data = findEventData(notificationMessageHolderType);
+                        Node data = findEventData(mht);
                         if (data != null) {
                             handled = true;
                             String name = data.getAttributes().getNamedItem("Name").getTextContent();
                             String value = data.getAttributes().getNamedItem("Value").getTextContent();
-                            log.info(
-                                    "[{}]: Received onvif event <{}>. Name: <{}>. Value: <{}>",
-                                    entityID,
-                                    topic,
-                                    name,
-                                    value);
+                            log.debug("[{}]: Received onvif event <{}>. Name: <{}>. Value: <{}>",
+                                entityID, topic, name, value);
                             eventHandlers.get(topic).handle(name, value);
                         }
                     }

@@ -10,9 +10,11 @@ import java.util.Map;
 import javax.xml.namespace.QName;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 @Setter
 @Getter
+@Accessors(chain = true)
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(
         name = "User",

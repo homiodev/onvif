@@ -144,7 +144,6 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
                 soapRequestElem,
                 soapResponseClass,
                 onvifDeviceState.getServerDeviceUri(),
-                onvifDeviceState.getServerDeviceIpLessUri(),
                 false);
     }
 
@@ -154,7 +153,6 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
                 soapRequestElem,
                 soapResponseClass,
                 onvifDeviceState.getServerDeviceUri(),
-                onvifDeviceState.getServerDeviceIpLessUri(),
                 true);
     }
 
@@ -173,7 +171,6 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
                 soapRequestElem,
                 soapResponseClass,
                 onvifDeviceState.getServerPtzUri(),
-                onvifDeviceState.getServerPtzIpLessUri(),
                 false);
     }
 
@@ -183,7 +180,6 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
                 soapRequestElem,
                 soapResponseClass,
                 onvifDeviceState.getServerMediaUri(),
-                onvifDeviceState.getServerMediaIpLessUri(),
                 false);
     }
 
@@ -193,7 +189,6 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
                 soapRequestElem,
                 soapResponseClass,
                 onvifDeviceState.getServerImagingUri(),
-                onvifDeviceState.getServerImagingIpLessUri(),
                 false);
     }
 
@@ -203,13 +198,12 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
                 soapRequestElem,
                 soapResponseClass,
                 onvifDeviceState.getServerEventsUri(),
-                onvifDeviceState.getServerEventsIpLessUri(),
                 false);
     }
 
     @SneakyThrows
     public void sendSOAPEventRequestAsync(Object soapRequestElem) {
-        sendSOAPRequestAsync(soapRequestElem, onvifDeviceState.getServerEventsIpLessUri());
+        sendSOAPRequestAsync(soapRequestElem, onvifDeviceState.getServerEventsUri().getXAddr());
     }
 
     @SneakyThrows
@@ -256,8 +250,7 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
     public <T> T createSOAPRequest(
             Object soapRequestElem,
             Class<T> soapResponseClass,
-            String soapUri,
-            String xAddr,
+        OnvifUrl uri,
             boolean throwError)
             throws IOException, SOAPException, JAXBException, ParserConfigurationException {
         HttpSOAPConnection soapConnection;
@@ -267,7 +260,7 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
             // Create SOAP Connection
             soapConnection = new HttpSOAPConnection(entityID);
 
-            SOAPMessage soapMessage = createSoapMessage(soapRequestElem, xAddr);
+            SOAPMessage soapMessage = createSoapMessage(soapRequestElem, uri.getXAddr());
 
             // Print the request message
             if (logging) {
@@ -280,7 +273,7 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
                 log.info("[{}]: {}", entityID, bout.toString());
             }
 
-            soapResponse = soapConnection.call(soapMessage, soapUri);
+            soapResponse = soapConnection.call(soapMessage, uri.getFullUrl());
 
             // print SOAP Response
             if (logging) {
@@ -297,10 +290,10 @@ public class SOAP implements OnvifCodec.OnvifEventHandler {
                     String error = ((QName) iterator.next()).getLocalPart();
                     if ("NotAuthorized".equals(error)) {
                         throw new BadCredentialException(
-                                "Wrong credential to authorize access to soap URI: " + soapUri);
+                            "Wrong credential to authorize access to soap URI: " + uri.getFullUrl());
                     }
                     throw new RuntimeException(
-                            "Unknown fault <" + error + "> during access to soap URI: " + soapUri);
+                        "Unknown fault <" + error + "> during access to soap URI: " + uri.getFullUrl());
                 }
                 if (throwError) {
                     String faultCode = soapResponse.getSOAPBody().getFault().getFaultCode();

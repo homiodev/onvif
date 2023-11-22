@@ -5,8 +5,12 @@ import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlType;
 import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
+@ToString
 @Getter
+@Setter
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(
         name = "FloatRange",
@@ -18,12 +22,4 @@ public class FloatRange {
 
     @XmlElement(name = "Max")
     protected float max;
-
-    public void setMin(float value) {
-        this.min = value;
-    }
-
-    public void setMax(float value) {
-        this.max = value;
-    }
 }

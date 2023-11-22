@@ -6,6 +6,8 @@ import de.onvif.soap.devices.InitialDevices;
 import de.onvif.soap.devices.MediaDevices;
 import de.onvif.soap.devices.PtzDevices;
 import java.net.ConnectException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
@@ -44,17 +46,12 @@ public class OnvifDeviceState {
     private String originalIp;
     private boolean isProxy;
     @Getter private String username, password, nonce, utcTime;
-    private String serverDeviceUri;
-    private String serverPtzUri;
-    private String serverMediaUri;
-    private String serverImagingUri;
-    private String serverEventsUri;
-    private String analyticsUri;
-    private String serverDeviceIpLessUri;
-    private String serverPtzIpLessUri;
-    private String serverMediaIpLessUri;
-    private String serverImagingIpLessUri;
-    private String serverEventsIpLessUri;
+    private OnvifUrl serverDeviceUri;
+    private OnvifUrl serverPtzUri;
+    private OnvifUrl serverMediaUri;
+    private OnvifUrl serverImagingUri;
+    private OnvifUrl serverEventsUri;
+    private OnvifUrl analyticsUri;
     private String subscriptionIpLessUri;
     private List<Profile> profiles;
     private String ip;
@@ -100,8 +97,7 @@ public class OnvifDeviceState {
         this.ip = ip;
         this.onvifPort = onvifPort;
         this.HOST_IP = ip + ":" + onvifPort;
-        this.serverDeviceUri = "http://%s/onvif/device_service".formatted(HOST_IP);
-        this.serverDeviceIpLessUri = "/onvif/device_service";
+        this.serverDeviceUri = new OnvifUrl("http://%s/onvif/device_service".formatted(HOST_IP));
         this.username = user;
         this.password = password;
     }
@@ -115,7 +111,11 @@ public class OnvifDeviceState {
         this.profiles = initialDevices.getProfiles();
 
         if (ptzDevices.supportPTZ() && !profiles.isEmpty()) {
-            ptzDevices.initFully(profiles.get(0));
+            Profile profile = profiles.stream()
+                                      .filter(p -> p.getName().toLowerCase().contains("main"))
+                                      .findAny()
+                                      .orElse(profiles.get(0));
+            ptzDevices.initFully(profile);
         }
 
         initialized = true;
@@ -230,48 +230,53 @@ public class OnvifDeviceState {
     @SneakyThrows
     private void init() {
         if (this.capabilities == null) {
-            this.capabilities = initialDevices.getCapabilities();
-
-            if (capabilities == null) {
-                throw new ConnectException("Capabilities not reachable.");
+            try {
+                fullInit();
+            } catch (Exception ex) {
+                this.capabilities = null;
+                throw ex;
             }
+        }
+    }
 
-            String localDeviceUri = capabilities.getDevice().getXAddr();
+    private void fullInit() throws ConnectException, MalformedURLException {
+        this.capabilities = initialDevices.getCapabilities();
 
-            if (localDeviceUri.startsWith("http://")) {
-                originalIp = localDeviceUri.replace("http://", "");
-                originalIp = originalIp.substring(0, originalIp.indexOf('/'));
-            } else {
-                log.error("[{}]: Unknown/Not implemented local protocol!", entityID);
-            }
+        if (capabilities == null) {
+            throw new ConnectException("Capabilities not reachable.");
+        }
 
-            if (!originalIp.equals(HOST_IP)) {
-                isProxy = true;
-            }
+        String localDeviceUri = capabilities.getDevice().getXAddr();
 
-            if (capabilities.getMedia() != null && capabilities.getMedia().getXAddr() != null) {
-                serverMediaUri = replaceLocalIpWithProxyIp(capabilities.getMedia().getXAddr());
-                serverMediaIpLessUri = SOAP.removeIpFromUrl(serverMediaUri);
-            }
+        if (localDeviceUri.startsWith("http://")) {
+            URL localUrl = new URL(localDeviceUri);
+            originalIp = localUrl.getHost() + ":" + (localUrl.getPort() == -1 ? 80 : localUrl.getPort());
+        } else {
+            throw new RuntimeException("Unknown/Not implemented local protocol");
+        }
 
-            if (capabilities.getPtz() != null && capabilities.getPtz().getXAddr() != null) {
-                serverPtzUri = replaceLocalIpWithProxyIp(capabilities.getPtz().getXAddr());
-                serverPtzIpLessUri = SOAP.removeIpFromUrl(serverPtzUri);
-            }
+        if (!originalIp.equals(HOST_IP)) {
+            isProxy = true;
+        }
 
-            if (capabilities.getImaging() != null && capabilities.getImaging().getXAddr() != null) {
-                serverImagingUri = replaceLocalIpWithProxyIp(capabilities.getImaging().getXAddr());
-                serverImagingIpLessUri = SOAP.removeIpFromUrl(serverImagingUri);
-            }
+        if (capabilities.getMedia() != null && capabilities.getMedia().getXAddr() != null) {
+            serverMediaUri = new OnvifUrl(replaceLocalIpWithProxyIp(capabilities.getMedia().getXAddr()));
+        }
 
-            if (capabilities.getMedia() != null && capabilities.getEvents().getXAddr() != null) {
-                serverEventsUri = replaceLocalIpWithProxyIp(capabilities.getEvents().getXAddr());
-                serverEventsIpLessUri = SOAP.removeIpFromUrl(serverEventsUri);
-            }
+        if (capabilities.getPtz() != null && capabilities.getPtz().getXAddr() != null) {
+            serverPtzUri = new OnvifUrl(replaceLocalIpWithProxyIp(capabilities.getPtz().getXAddr()));
+        }
 
-            if (capabilities.getAnalytics() != null && capabilities.getAnalytics().getXAddr() != null) {
-                analyticsUri = replaceLocalIpWithProxyIp(capabilities.getAnalytics().getXAddr());
-            }
+        if (capabilities.getImaging() != null && capabilities.getImaging().getXAddr() != null) {
+            serverImagingUri = new OnvifUrl(replaceLocalIpWithProxyIp(capabilities.getImaging().getXAddr()));
+        }
+
+        if (capabilities.getMedia() != null && capabilities.getEvents().getXAddr() != null) {
+            serverEventsUri = new OnvifUrl(replaceLocalIpWithProxyIp(capabilities.getEvents().getXAddr()));
+        }
+
+        if (capabilities.getAnalytics() != null && capabilities.getAnalytics().getXAddr() != null) {
+            analyticsUri = new OnvifUrl(replaceLocalIpWithProxyIp(capabilities.getAnalytics().getXAddr()));
         }
     }
 

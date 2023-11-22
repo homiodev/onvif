@@ -6,8 +6,10 @@ import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlType;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(
         name = "DeviceServiceCapabilities",
@@ -25,20 +27,4 @@ public class DeviceServiceCapabilities {
 
     @XmlElement(name = "Misc")
     protected MiscCapabilities misc;
-
-    public void setNetwork(NetworkCapabilities value) {
-        this.network = value;
-    }
-
-    public void setSecurity(SecurityCapabilities value) {
-        this.security = value;
-    }
-
-    public void setSystem(SystemCapabilities value) {
-        this.system = value;
-    }
-
-    public void setMisc(MiscCapabilities value) {
-        this.misc = value;
-    }
 }

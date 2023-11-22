@@ -6,8 +6,10 @@ import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlType;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(
         name = "",
@@ -17,8 +19,4 @@ public class SetPresetResponse {
 
     @XmlElement(name = "PresetToken", required = true)
     protected String presetToken;
-
-    public void setPresetToken(String value) {
-        this.presetToken = value;
-    }
 }

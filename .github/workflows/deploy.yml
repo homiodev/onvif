@@ -18,7 +18,8 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
           server-id: github
-          settings-path: ${{ github.workspace }}
+          server-username: ${{ github.actor }}
+          server-password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Maven settings
         run: |

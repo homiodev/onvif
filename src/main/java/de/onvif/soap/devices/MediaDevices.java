@@ -10,27 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onvif.ver10.media.wsdl.GetAudioSources;
-import org.onvif.ver10.media.wsdl.GetAudioSourcesResponse;
-import org.onvif.ver10.media.wsdl.GetSnapshotUri;
-import org.onvif.ver10.media.wsdl.GetSnapshotUriResponse;
-import org.onvif.ver10.media.wsdl.GetStreamUri;
-import org.onvif.ver10.media.wsdl.GetStreamUriResponse;
-import org.onvif.ver10.media.wsdl.GetVideoEncoderConfigurationOptions;
-import org.onvif.ver10.media.wsdl.GetVideoEncoderConfigurationOptionsResponse;
-import org.onvif.ver10.media.wsdl.GetVideoSources;
-import org.onvif.ver10.media.wsdl.GetVideoSourcesResponse;
-import org.onvif.ver10.media.wsdl.SetVideoEncoderConfiguration;
-import org.onvif.ver10.media.wsdl.SetVideoEncoderConfigurationResponse;
-import org.onvif.ver10.schema.AudioSource;
-import org.onvif.ver10.schema.Profile;
-import org.onvif.ver10.schema.StreamSetup;
-import org.onvif.ver10.schema.StreamType;
-import org.onvif.ver10.schema.Transport;
-import org.onvif.ver10.schema.TransportProtocol;
-import org.onvif.ver10.schema.VideoEncoderConfiguration;
-import org.onvif.ver10.schema.VideoEncoderConfigurationOptions;
-import org.onvif.ver10.schema.VideoSource;
+import org.onvif.ver10.media.wsdl.*;
+import org.onvif.ver10.schema.*;
 
 @RequiredArgsConstructor
 public class MediaDevices {
@@ -122,6 +103,33 @@ public class MediaDevices {
         }
 
         return response.getAudioSources();
+    }
+
+    public AudioDecoderConfigurationOptions getAudioDecoderConfigurationOptions() {
+        var request = new GetAudioDecoderConfigurationOptions();
+        var response = soap.createSOAPMediaRequest(request, GetAudioDecoderConfigurationOptionsResponse.class);
+        if (response == null) {
+            return null;
+        }
+        return response.getOptions();
+    }
+
+    public List<AudioOutput> getAudioOutputs() {
+        var request = new GetAudioOutputs();
+        var response = soap.createSOAPMediaRequest(request, GetAudioOutputsResponse.class);
+        if (response == null) {
+            return List.of();
+        }
+        return response.getAudioOutputs();
+    }
+
+    public List<AudioOutputConfiguration> getAudioOutputConfigurations() {
+        var request = new GetAudioOutputConfigurations();
+        var response = soap.createSOAPMediaRequest(request, GetAudioOutputConfigurationsResponse.class);
+        if (response == null) {
+            return List.of();
+        }
+        return response.getConfigurations();
     }
 
     public void dispose() {

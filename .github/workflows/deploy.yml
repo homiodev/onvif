@@ -1,4 +1,4 @@
-name: Deploy onvif
+name: Build & Publish homio-dependency
 
 on:
   push:
@@ -20,14 +20,14 @@ jobs:
           server-id: github
           settings-path: ${{ github.workspace }}
 
-      - name: Set up settings.xml
+      - name: Configure Maven settings
         run: |
           mkdir -p ~/.m2
           echo '<settings>
             <servers>
               <server>
                 <id>github</id>
-                <username>${{ github.actor }}</username>
+                <username>${{ secrets.MAVEN_USERNAME }}</username>
                 <password>${{ secrets.GITHUB_TOKEN }}</password>
               </server>
             </servers>

@@ -1,4 +1,4 @@
-name: Build & Publish homio-dependency
+name: Build & Publish onvif
 
 on:
   push:
@@ -20,19 +20,6 @@ jobs:
           server-id: github
           settings-path: ${{ github.workspace }}
 
-      - name: Configure Maven settings
-        run: |
-          mkdir -p ~/.m2
-          echo '<settings>
-            <servers>
-              <server>
-                <id>github</id>
-                <username>${{ secrets.MAVEN_USERNAME }}</username>
-                <password>${{ secrets.GITHUB_TOKEN }}</password>
-              </server>
-            </servers>
-          </settings>' > ~/.m2/settings.xml
-
       - name: Import GPG Key
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
@@ -42,4 +29,4 @@ jobs:
           GPG_TTY: /dev/tty
 
       - name: Build & Publish
-        run: mvn clean deploy -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }}
+        run: mvn clean install -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }}
